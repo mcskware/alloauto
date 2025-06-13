@@ -10,28 +10,23 @@
         let classifier;
         let MAX_LEN = 512;
 
-        env.allowRemoteModels = false
-        env.localModelPath = '.'
+        env.allowRemoteModels = false;
+        env.localModelPath = '.';
 
         async function loadModel() {
             document.getElementById("classify-btn").disabled = true;
             document.getElementById("status").innerText = "🔄 Loading model...";
-
             classifier = await pipeline('text-classification', './model', {
                 quantized: false,
                 revision: 'main',
                 local_files_only: true,
             });
-
-
             document.getElementById("status").innerText = "✅ Model loaded!";
             document.getElementById("classify-btn").disabled = false;
-
         }
 
         function splitChunks(text) {
             const chunks = text.split(/\s*\/+\s*/).map(s => s.trim()).filter(Boolean);
-            console.log("Splitting input into chunks:", chunks);
             return chunks;
         }
 
@@ -50,36 +45,44 @@
         }
 
         async function classifyInput() {
+            document.getElementById("classify-btn").disabled = true;
+
             const input = document.getElementById("input").value;
-            const results = [];
             const chunks = splitChunks(input);
+            const results = [];
+
+            const outputDiv = document.getElementById("output");
+            const heatmapDiv = document.getElementById("heatmap");
+            outputDiv.innerHTML = "";
+            heatmapDiv.innerHTML = "";
 
             for (let i = 0; i < chunks.length; i++) {
                 const chunk = chunks[i];
-
                 try {
                     const tokens = await classifier.tokenizer(chunk);
                     const output = await classifier.model(tokens);
-                    const logits = output.logits.data; // this is the Float32Array
+                    const logits = output.logits.data;
                     const [allo, auto] = softmax(Array.from(logits));
                     results.push({ chunk, allo, auto });
                 } catch (e) {
                     console.error(`❌ Error classifying chunk ${i + 1}:`, e);
+                    results.push({ chunk, allo: 0.5, auto: 0.5 });
                 }
             }
 
-            renderResults(results);
-        }
-
-
-
-        function renderResults(results) {
-            const outputDiv = document.getElementById("output");
-            outputDiv.innerHTML = "";
-
             results.forEach((r, i) => {
                 const color = confidenceColor(r.allo, r.auto);
+
+                // Heatmap block
+                const heatCell = document.createElement("a");
+                heatCell.href = `#chunk-${i}`;
+                heatCell.title = `Allo: ${r.allo.toFixed(2)}, Auto: ${r.auto.toFixed(2)}`;
+                heatCell.style = `background:${color}; width:10px; height:18px; display:inline-block; margin:1px; border-radius:2px;`;
+                heatmapDiv.appendChild(heatCell);
+
+                // Chunk display
                 const div = document.createElement("div");
+                div.id = `chunk-${i}`;
                 div.style = `background:${color}; padding:10px; margin:6px; border-radius:4px;`;
                 div.innerHTML = `
           <div><strong>Chunk ${i + 1}</strong> — Allo: ${r.allo.toFixed(2)}, Auto: ${r.auto.toFixed(2)}</div>
@@ -87,26 +90,56 @@
         `;
                 outputDiv.appendChild(div);
             });
+            document.getElementById("classify-btn").disabled = false;
+
         }
 
         window.addEventListener('load', loadModel);
         window.classifyInput = classifyInput;
-        window.debugClassifier = async function (text) {
-            const tokens = await classifier.tokenizer(text);
-            const output = await classifier.model(tokens);
-            console.log("Tokens:", tokens);
-            console.log("Raw output:", output);
-        };
-
     </script>
+
+    <style>
+        body {
+            font-family: sans-serif;
+            padding: 20px;
+            background: #f9f9f9;
+        }
+
+        #heatmap {
+            margin: 10px 0 20px 0;
+            padding: 8px;
+            background: #eee;
+            border-radius: 4px;
+            display: flex;
+            flex-wrap: wrap;
+        }
+
+        textarea {
+            width: 100%;
+            max-width: 100%;
+            font-family: monospace;
+        }
+
+        button {
+            margin-top: 8px;
+            padding: 6px 12px;
+            font-size: 1em;
+        }
+
+        #output {
+            margin-top: 20px;
+        }
+    </style>
 </head>
 
-<body style="font-family: sans-serif; padding: 20px;">
+<body>
     <h2>🧠 Autochthonous vs Allochthonous Classifier</h2>
     <p id="status">Loading model...</p>
-    <textarea id="input" rows="10" cols="100" placeholder="Paste Wylie-transcribed text here..."></textarea><br>
+    <textarea id="input" rows="10" placeholder="Paste Wylie-transcribed text here..."></textarea><br>
     <button id="classify-btn" onclick="classifyInput()">Classify</button>
-    <div id="output" style="margin-top: 20px;"></div>
+
+    <div id="heatmap"></div>
+    <div id="output"></div>
 </body>
 
 </html>
