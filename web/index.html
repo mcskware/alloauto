@@ -10,10 +10,15 @@
         let classifier;
         let MAX_LEN = 512;
 
+
+
         async function loadModel() {
+            document.getElementById("classify-btn").disabled = true;
             document.getElementById("status").innerText = "🔄 Loading model...";
-            classifier = await pipeline('text-classification', 'model/', { quantized: false });
+            classifier = await pipeline('text-classification', 'web/model/', { quantized: false });
             document.getElementById("status").innerText = "✅ Model loaded!";
+            document.getElementById("classify-btn").disabled = false;
+
         }
 
         function splitChunks(text) {
@@ -60,6 +65,7 @@
         }
 
         window.addEventListener('load', loadModel);
+        window.classifyInput = classifyInput;
     </script>
 </head>
 
@@ -67,7 +73,7 @@
     <h2>🧠 Autochthonous vs Allochthonous Classifier</h2>
     <p id="status">Loading model...</p>
     <textarea id="input" rows="10" cols="100" placeholder="Paste Wylie-transcribed text here..."></textarea><br>
-    <button onclick="classifyInput()">Classify</button>
+    <button id="classify-btn" onclick="classifyInput()">Classify</button>
     <div id="output" style="margin-top: 20px;"></div>
 </body>
 
