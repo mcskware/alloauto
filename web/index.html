@@ -42,6 +42,13 @@
             return `rgb(${r},${g},${b})`;
         }
 
+        function softmax(arr) {
+            const max = Math.max(...arr);
+            const exps = arr.map(x => Math.exp(x - max));
+            const sum = exps.reduce((a, b) => a + b, 0);
+            return exps.map(x => x / sum);
+        }
+
         async function classifyInput() {
             const input = document.getElementById("input").value;
             const results = [];
@@ -49,14 +56,22 @@
 
             for (let i = 0; i < chunks.length; i++) {
                 const chunk = chunks[i];
-                const result = await classifier(chunk, { topk: 2 });
-                const allo = result.find(r => r.label === "LABEL_0")?.score || 0;
-                const auto = result.find(r => r.label === "LABEL_1")?.score || 0;
-                results.push({ chunk, allo, auto });
+
+                try {
+                    const tokens = await classifier.tokenizer(chunk);
+                    const output = await classifier.model(tokens);
+                    const logits = output.logits.data; // this is the Float32Array
+                    const [allo, auto] = softmax(Array.from(logits));
+                    results.push({ chunk, allo, auto });
+                } catch (e) {
+                    console.error(`❌ Error classifying chunk ${i + 1}:`, e);
+                }
             }
 
             renderResults(results);
         }
+
+
 
         function renderResults(results) {
             const outputDiv = document.getElementById("output");
@@ -76,6 +91,13 @@
 
         window.addEventListener('load', loadModel);
         window.classifyInput = classifyInput;
+        window.debugClassifier = async function (text) {
+            const tokens = await classifier.tokenizer(text);
+            const output = await classifier.model(tokens);
+            console.log("Tokens:", tokens);
+            console.log("Raw output:", output);
+        };
+
     </script>
 </head>
 
