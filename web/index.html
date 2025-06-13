@@ -5,24 +5,34 @@
     <meta charset="UTF-8">
     <title>Auto/Allo Classifier</title>
     <script type="module">
-        import { pipeline } from 'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.4.1';
+        import { env, pipeline } from 'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.4.1';
 
         let classifier;
         let MAX_LEN = 512;
 
-
+        env.allowRemoteModels = false
+        env.localModelPath = '.'
 
         async function loadModel() {
             document.getElementById("classify-btn").disabled = true;
             document.getElementById("status").innerText = "🔄 Loading model...";
-            classifier = await pipeline('text-classification', 'web/model/', { quantized: false });
+
+            classifier = await pipeline('text-classification', './model', {
+                quantized: false,
+                revision: 'main',
+                local_files_only: true,
+            });
+
+
             document.getElementById("status").innerText = "✅ Model loaded!";
             document.getElementById("classify-btn").disabled = false;
 
         }
 
         function splitChunks(text) {
-            return text.split(/\s*\/+\s*/).map(s => s.trim()).filter(Boolean);
+            const chunks = text.split(/\s*\/+\s*/).map(s => s.trim()).filter(Boolean);
+            console.log("Splitting input into chunks:", chunks);
+            return chunks;
         }
 
         function confidenceColor(allo, auto) {
