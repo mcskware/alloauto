@@ -21,6 +21,9 @@
                 revision: 'main',
                 local_files_only: true,
             });
+
+
+
             document.getElementById("status").innerText = "✅ Model loaded!";
             document.getElementById("classify-btn").disabled = false;
         }
@@ -60,6 +63,7 @@
                 const chunk = chunks[i];
                 try {
                     const tokens = await classifier.tokenizer(chunk);
+                    console.log("Tokens are ", tokens, "for chunk", i + 1, ":", chunk.substring(0, 50) + '...');
                     const output = await classifier.model(tokens);
                     const logits = output.logits.data;
                     const [allo, auto] = softmax(Array.from(logits));
