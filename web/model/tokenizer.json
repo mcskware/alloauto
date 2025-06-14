@@ -60,10 +60,12 @@
   ],
   "normalizer": null,
   "pre_tokenizer": {
-    "type": "ByteLevel",
-    "add_prefix_space": false,
-    "trim_offsets": true,
-    "use_regex": true
+    "type": "Split",
+    "pattern": {
+      "Regex": "[a-z'#]+"
+    },
+    "behavior": "Isolated",
+    "invert": true
   },
   "post_processor": null,
   "decoder": {
